@@ -9,6 +9,7 @@ var addOns = listOf(
     "accessControl",
     "alertFilters",
     "alertReport",
+    "alertsExport",
     "allinonenotes",
     "amf",
     "ascanrules",
