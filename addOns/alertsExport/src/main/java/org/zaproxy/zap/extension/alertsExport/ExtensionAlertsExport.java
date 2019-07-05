@@ -64,7 +64,7 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
 
     // The i18n prefix, by default the package name - defined in one place to make it easier
     // to copy and change this example
-    protected static final String PREFIX = "alertsExport";
+    // protected static final String PREFIX = "alertsExport";
 
     /**
      * Relative path (from add-on package) to load add-on resources.
@@ -72,8 +72,6 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
      * @see Class#getResource(String)
      */
     private static final String RESOURCES = "resources";
-
-    private static final String AUTHOR = "Cloudanix";
 
     private static final Logger LOGGER = Logger.getLogger(ExtensionAlertsExport.class);
 
@@ -84,7 +82,7 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
 
     public ExtensionAlertsExport() {
         super(NAME);
-        this.setI18nPrefix(PREFIX);
+        // this.setI18nPrefix(PREFIX);
     }
 
     @Override
@@ -142,12 +140,12 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
 
     @Override
     public String getAuthor() {
-        return AUTHOR;
+        return Constant.messages.getString("alertsExport.author");
     }
 
     @Override
     public String getDescription() {
-        return this.getMessages().getString(PREFIX + ".desc");
+        return Constant.messages.getString("alertsExport.desc");
     }
 
     @Override
@@ -198,7 +196,7 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
                         null,
                         "",
                         "-alertsexporturl [target url]: "
-                                + Constant.messages.getString("alertsexport.cmdline.url.help"));
+                                + Constant.messages.getString("alertsExport.cmdline.url.help"));
         return arguments;
     }
 
