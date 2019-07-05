@@ -34,18 +34,15 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.apache.log4j.Logger;
 import org.parosproxy.paros.Constant;
-import org.parosproxy.paros.db.TableAlert;
 import org.parosproxy.paros.extension.CommandLineArgument;
 import org.parosproxy.paros.extension.CommandLineListener;
 import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
 import org.parosproxy.paros.extension.report.ReportGenerator;
 import org.parosproxy.paros.extension.report.ReportLastScan;
-import org.parosproxy.paros.model.Model;
 import org.zaproxy.zap.ZAP;
 import org.zaproxy.zap.eventBus.Event;
 import org.zaproxy.zap.eventBus.EventConsumer;
-import org.zaproxy.zap.extension.alert.AlertEventPublisher;
 import org.zaproxy.zap.extension.spider.SpiderEventPublisher;
 
 /**
@@ -92,14 +89,15 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
         ZAP.getEventBus()
                 .registerConsumer(
                         this,
-                        AlertEventPublisher.getPublisher().getPublisherName(),
-                        new String[] {AlertEventPublisher.ALERT_ADDED_EVENT});
-
-        ZAP.getEventBus()
-                .registerConsumer(
-                        this,
                         SpiderEventPublisher.getPublisher().getPublisherName(),
                         new String[] {SpiderEventPublisher.SCAN_COMPLETED_EVENT});
+
+        // import org.zaproxy.zap.extension.alert.AlertEventPublisher;
+        // ZAP.getEventBus()
+        //         .registerConsumer(
+        //                 this,
+        //                 AlertEventPublisher.getPublisher().getPublisherName(),
+        //                 new String[] {AlertEventPublisher.ALERT_ADDED_EVENT});
     }
 
     @Override
@@ -132,10 +130,10 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
         // here (if the extension declares that can be unloaded, see above method).
 
         ZAP.getEventBus()
-                .unregisterConsumer(this, AlertEventPublisher.getPublisher().getPublisherName());
-
-        ZAP.getEventBus()
                 .unregisterConsumer(this, SpiderEventPublisher.getPublisher().getPublisherName());
+
+        // ZAP.getEventBus()
+        //         .unregisterConsumer(this, AlertEventPublisher.getPublisher().getPublisherName());
     }
 
     @Override
@@ -163,8 +161,8 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
             String targetPath = arguments[ARG_ALERTS_EXPORT_URL_IDX].getArguments().get(0);
 
             TargetURL = targetPath;
-            LOGGER.info("targetPath from commandline: " + targetPath);
-            LOGGER.info("TargetURL: " + TargetURL);
+            // LOGGER.info("targetPath from commandline: " + targetPath);
+            // LOGGER.info("TargetURL: " + TargetURL);
         } else {
             return;
         }
@@ -202,7 +200,7 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
 
     @Override
     public void eventReceived(Event event) {
-        LOGGER.info("event type: " + event.getEventType());
+        LOGGER.info("received new event: " + event.getEventType());
 
         switch (event.getEventType()) {
             case SpiderEventPublisher.SCAN_COMPLETED_EVENT:
@@ -217,7 +215,7 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
 
                     String jsonReport = ReportGenerator.stringToJson(report.toString());
 
-                    LOGGER.info("last scan report: " + jsonReport);
+                    // LOGGER.info("last scan report: " + jsonReport);
 
                     PostReport(jsonReport, TargetURL);
 
@@ -226,16 +224,16 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
                 }
 
                 break;
-            case AlertEventPublisher.ALERT_ADDED_EVENT:
-                TableAlert tableAlert = Model.getSingleton().getDb().getTableAlert();
+                // case AlertEventPublisher.ALERT_ADDED_EVENT:
+                //     TableAlert tableAlert = Model.getSingleton().getDb().getTableAlert();
 
-                String alertId = event.getParameters().get(AlertEventPublisher.ALERT_ID);
+                //     String alertId = event.getParameters().get(AlertEventPublisher.ALERT_ID);
 
-                LOGGER.info("alertId: " + alertId);
+                //     LOGGER.info("alertId: " + alertId);
 
-                // LOGGER.info("TargetURL: " + TargetURL);
+                //     // LOGGER.info("TargetURL: " + TargetURL);
 
-                break;
+                //     break;
         }
     }
 
@@ -264,11 +262,15 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
                 responseCode = responseLine.getStatusCode();
             }
 
-            LOGGER.info("response status line: " + responseLine);
+            // LOGGER.info("response status line: " + responseLine);
 
-            LOGGER.info("response status code: " + responseCode);
+            LOGGER.info(
+                    "Scan report Posted to "
+                            + target
+                            + " successfully with Response Status Code: "
+                            + responseCode);
 
-            LOGGER.info("response from HTTP Post: " + resEntity.toString());
+            // LOGGER.info("response from HTTP Post: " + resEntity.toString());
         } finally {
             client.close();
         }
