@@ -215,7 +215,7 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
 
                     String jsonReport = ReportGenerator.stringToJson(report.toString());
 
-                    // LOGGER.info("last scan report: " + jsonReport);
+                    // LOGGER.info("Last Scan Report: " + jsonReport);
 
                     PostReport(jsonReport, TargetURL);
 
@@ -265,10 +265,13 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
             // LOGGER.info("response status line: " + responseLine);
 
             LOGGER.info(
-                    "Scan report Posted to "
+                    "Scan Report posted. Content Length: ### "
+                            + report.length()
+                            + " ###. Response Status Code: ### "
+                            + responseCode
+                            + " ###. Target: ### "
                             + target
-                            + " successfully with Response Status Code: "
-                            + responseCode);
+                            + " ###.");
 
             // LOGGER.info("response from HTTP Post: " + resEntity.toString());
         } finally {
