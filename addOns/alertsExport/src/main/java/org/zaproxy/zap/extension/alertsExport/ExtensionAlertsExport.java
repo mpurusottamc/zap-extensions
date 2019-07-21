@@ -204,16 +204,22 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
 
         switch (event.getEventType()) {
             case SpiderEventPublisher.SCAN_COMPLETED_EVENT:
-                LOGGER.info(
-                        "scan completed: "
-                                + event.getParameters().get(SpiderEventPublisher.SCAN_ID));
+                String scanId = event.getParameters().get(SpiderEventPublisher.SCAN_ID);
+                LOGGER.info("scan completed: " + scanId);
 
                 // LOGGER.info("TargetURL: " + TargetURL);
 
                 try {
                     String report = getScanReport();
 
-                    String jsonReport = ReportGenerator.stringToJson(report.toString());
+                    String jsonReport = ReportGenerator.stringToJson(report);
+
+                    // embed ScanId into the report
+                    jsonReport =
+                            "{\"@scanId\": \""
+                                    + scanId
+                                    + "\","
+                                    + jsonReport.substring(1, jsonReport.length());
 
                     // LOGGER.info("Last Scan Report: " + jsonReport);
 
