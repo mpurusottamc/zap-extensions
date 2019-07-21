@@ -19,7 +19,8 @@
  */
 package org.zaproxy.zap.extension.websocket.pscan.scripts;
 
-import java.util.List;
+import java.util.Optional;
+import java.util.function.Consumer;
 import org.parosproxy.paros.Constant;
 import org.parosproxy.paros.control.Control;
 import org.zaproxy.zap.extension.script.ExtensionScript;
@@ -27,6 +28,7 @@ import org.zaproxy.zap.extension.script.ScriptType;
 import org.zaproxy.zap.extension.script.ScriptWrapper;
 import org.zaproxy.zap.extension.websocket.ExtensionWebSocket;
 import org.zaproxy.zap.extension.websocket.WebSocketMessageDTO;
+import org.zaproxy.zap.extension.websocket.alerts.WebSocketAlertRaiser;
 import org.zaproxy.zap.extension.websocket.pscan.WebSocketPassiveScanner;
 import org.zaproxy.zap.extension.websocket.pscan.WebSocketScanHelper;
 
@@ -51,32 +53,50 @@ public class ScriptsWebSocketPassiveScanner implements WebSocketPassiveScanner {
 
     @Override
     public void scanMessage(WebSocketScanHelper helper, WebSocketMessageDTO webSocketMessage) {
+
+        run(
+                scriptDecorator ->
+                        scriptDecorator.scan(
+                                new WebSocketScanHelper() {
+                                    @Override
+                                    public WebSocketAlertRaiser newAlert() {
+                                        return WebSocketAlertRaiser.WebSocketAlertScriptRaiser
+                                                .getWebSocketAlertRaiser(
+                                                        helper.newAlert(), scriptDecorator.getId());
+                                    }
+                                },
+                                webSocketMessage));
+    }
+
+    private void run(Consumer<WebSocketPassiveScriptDecorator> action) {
         if (getExtension() != null) {
-            List<ScriptWrapper> scriptWrappers =
-                    extensionScript.getScripts(ExtensionWebSocket.SCRIPT_TYPE_WEBSOCKET_PASSIVE);
-            for (ScriptWrapper scriptWrapper : scriptWrappers) {
-                if (scriptWrapper.isEnabled()) {
-                    try {
-                        WebSocketPassiveScript webSocketPassiveScript =
-                                extensionScript.getInterface(
-                                        scriptWrapper, WebSocketPassiveScript.class);
-
-                        if (webSocketPassiveScript != null) {
-                            webSocketPassiveScript.scan(helper, webSocketMessage);
-                        } else {
-                            extensionScript.handleFailedScriptInterface(
-                                    scriptWrapper,
-                                    Constant.messages.getString(
-                                            "websocket.pscan.scripts.interface.passive.error",
-                                            scriptWrapper.getName()));
-                        }
-
-                    } catch (Exception e) {
-                        extensionScript.handleScriptException(scriptWrapper, e);
-                    }
-                }
-            }
+            extensionScript.getScripts(ExtensionWebSocket.SCRIPT_TYPE_WEBSOCKET_PASSIVE).stream()
+                    .filter(ScriptWrapper::isEnabled)
+                    .map(this::getInterface)
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .forEach(action);
         }
+    }
+
+    private Optional<WebSocketPassiveScriptDecorator> getInterface(ScriptWrapper scriptWrapper) {
+        try {
+            WebSocketPassiveScript webSocketPassiveScript =
+                    extensionScript.getInterface(scriptWrapper, WebSocketPassiveScript.class);
+            if (webSocketPassiveScript != null) {
+                return Optional.of(
+                        new WebSocketPassiveScriptDecorator(webSocketPassiveScript, scriptWrapper));
+            } else {
+                extensionScript.handleFailedScriptInterface(
+                        scriptWrapper,
+                        Constant.messages.getString(
+                                "websocket.pscan.scripts.interface.passive.error",
+                                scriptWrapper.getName()));
+            }
+        } catch (Exception e) {
+            extensionScript.handleScriptException(scriptWrapper, e);
+        }
+        return Optional.empty();
     }
 
     @Override
