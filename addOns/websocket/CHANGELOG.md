@@ -5,6 +5,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+
+## [20] - 2019-07-23
+
 - Add WebSocket passive scan infrastructure.
   - Add WebSocket Passive scan script plugin.
     - Template scripts for:
@@ -138,4 +141,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 
 
+[20]: https://github.com/zaproxy/zap-extensions/releases/websocket-v20
 [19]: https://github.com/zaproxy/zap-extensions/releases/websocket-v19
