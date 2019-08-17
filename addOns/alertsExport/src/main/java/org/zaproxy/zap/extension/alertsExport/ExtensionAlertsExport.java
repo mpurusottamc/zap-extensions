@@ -23,7 +23,10 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import org.apache.http.HttpEntity;
 import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -40,10 +43,18 @@ import org.parosproxy.paros.extension.ExtensionAdaptor;
 import org.parosproxy.paros.extension.ExtensionHook;
 import org.parosproxy.paros.extension.report.ReportGenerator;
 import org.parosproxy.paros.extension.report.ReportLastScan;
+import org.parosproxy.paros.model.Model;
+import org.parosproxy.paros.model.SiteMap;
+import org.parosproxy.paros.model.SiteNode;
+import org.parosproxy.paros.network.HtmlParameter;
 import org.zaproxy.zap.ZAP;
 import org.zaproxy.zap.eventBus.Event;
 import org.zaproxy.zap.eventBus.EventConsumer;
+import org.zaproxy.zap.extension.params.ExtensionParams;
+import org.zaproxy.zap.extension.params.HtmlParameterStats;
+import org.zaproxy.zap.extension.params.SiteParameters;
 import org.zaproxy.zap.extension.spider.SpiderEventPublisher;
+import org.zaproxy.zap.view.ScanPanel;
 
 /**
  * An example ZAP extension which adds a top level menu item, a pop up menu item and a status panel.
@@ -75,7 +86,8 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
     private CommandLineArgument[] arguments = new CommandLineArgument[1];
     private static final int ARG_ALERTS_EXPORT_URL_IDX = 0;
 
-    private String TargetURL = "";
+    // This is the Owasp Result Push Message Listener URL
+    private String ListenerURI = "";
 
     public ExtensionAlertsExport() {
         super(NAME);
@@ -92,7 +104,6 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
                         SpiderEventPublisher.getPublisher().getPublisherName(),
                         new String[] {SpiderEventPublisher.SCAN_COMPLETED_EVENT});
 
-        // import org.zaproxy.zap.extension.alert.AlertEventPublisher;
         // ZAP.getEventBus()
         //         .registerConsumer(
         //                 this,
@@ -160,9 +171,7 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
         if (arguments[ARG_ALERTS_EXPORT_URL_IDX].isEnabled()) {
             String targetPath = arguments[ARG_ALERTS_EXPORT_URL_IDX].getArguments().get(0);
 
-            TargetURL = targetPath;
-            // LOGGER.info("targetPath from commandline: " + targetPath);
-            // LOGGER.info("TargetURL: " + TargetURL);
+            ListenerURI = targetPath;
         } else {
             return;
         }
@@ -177,13 +186,6 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
     public boolean handleFile(File file) {
         // Not supported
         return false;
-    }
-
-    private String getScanReport() throws Exception {
-        ReportLastScan report = new ReportLastScan();
-        StringBuilder rpt = new StringBuilder();
-        report.generate(rpt, getModel());
-        return rpt.toString();
     }
 
     private CommandLineArgument[] getCommandLineArguments() {
@@ -207,40 +209,118 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
                 String scanId = event.getParameters().get(SpiderEventPublisher.SCAN_ID);
                 LOGGER.info("scan completed: " + scanId);
 
-                // LOGGER.info("TargetURL: " + TargetURL);
-
                 try {
                     String report = getScanReport();
 
                     String jsonReport = ReportGenerator.stringToJson(report);
 
                     // embed ScanId into the report
-                    jsonReport =
-                            "{\"@scanId\": \""
-                                    + scanId
-                                    + "\","
-                                    + jsonReport.substring(1, jsonReport.length());
+                    jsonReport = "{\"@scanId\": \"" + scanId + "\"," + jsonReport.substring(1);
 
                     // LOGGER.info("Last Scan Report: " + jsonReport);
 
-                    PostReport(jsonReport, TargetURL);
-
+                    PostReport(jsonReport, ListenerURI);
                 } catch (Exception e) {
                     LOGGER.error("exception while getting last scan report: " + e);
                 }
 
                 break;
                 // case AlertEventPublisher.ALERT_ADDED_EVENT:
-                //     TableAlert tableAlert = Model.getSingleton().getDb().getTableAlert();
-
                 //     String alertId = event.getParameters().get(AlertEventPublisher.ALERT_ID);
 
                 //     LOGGER.info("alertId: " + alertId);
 
-                //     // LOGGER.info("TargetURL: " + TargetURL);
+                //     //                     TableAlert tableAlert =
+                //     // Model.getSingleton().getDb().getTableAlert();
 
+                //     //                     RecordAlert recordAlert;
+                //     //                     try {
+                //     //                         recordAlert = tableAlert.read(0);
+                //     //
+                //     //                         int historyId = recordAlert.getHistoryId();
+                //     //
+                //     //                         LOGGER.info("historyId: " + historyId);
+                //     //
+                //     ////                         TableHistory th =
+                //     // Model.getSingleton().getDb().getTableHistory();
+                //     ////                         RecordHistory rh = th.read(historyId);
+                //     //
+                //     //                     } catch (DatabaseException e) {
+                //     //                         LOGGER.error("Failed to read the alert from the
+                //     // session:", e);
+                //     //                     } catch (Exception e) {
+                //     //                         LOGGER.error("Failed to read the alert from the
+                //     // session:", e);
+                //     //                     }
                 //     break;
         }
+    }
+
+    // import org.parosproxy.paros.db.DatabaseException;
+    // import org.parosproxy.paros.db.RecordAlert;
+    // import org.parosproxy.paros.db.RecordHistory;
+    // import org.parosproxy.paros.db.TableAlert;
+    // import org.parosproxy.paros.db.TableHistory;
+    // import org.parosproxy.paros.model.Model;
+    // import org.zaproxy.zap.extension.alert.AlertEventPublisher;
+
+    private void printSiteTree(String scanId) {
+        List<ScanUri> uris = getSiteURI();
+
+        for (int i = 0; i < uris.size(); i++) {
+            ScanUri uri = uris.get(i);
+            LOGGER.info(
+                    "scan info: "
+                            + scanId
+                            + " Name - "
+                            + uri.Name()
+                            + " Host - "
+                            + uri.Host()
+                            + " Port - "
+                            + uri.Port()
+                            + " IsSSL -  "
+                            + uri.IsSSL());
+
+            ExtensionParams params = new ExtensionParams();
+            SiteParameters sps = params.getSiteParameters(uri.Host());
+            List<HtmlParameterStats> lhps = sps.getParams(HtmlParameter.Type.url);
+
+            LOGGER.info("parameters size: " + lhps.size());
+
+            for (int j = 0; j < lhps.size(); j++) {
+                HtmlParameterStats hps = lhps.get(i);
+
+                Set<String> values = hps.getValues();
+
+                for (Iterator<String> it = values.iterator(); it.hasNext(); ) {
+                    String val = it.next();
+                    LOGGER.info("values : " + val);
+                }
+            }
+        }
+    }
+
+    public List<ScanUri> getSiteURI() {
+        List<ScanUri> URIs = new ArrayList<>();
+        SiteMap siteMap = Model.getSingleton().getSession().getSiteTree();
+        SiteNode root = siteMap.getRoot();
+        int siteNumber = root.getChildCount();
+        for (int i = 0; i < siteNumber; i++) {
+            SiteNode site = (SiteNode) root.getChildAt(i);
+            String siteName = ScanPanel.cleanSiteName(site, true);
+            String[] hostAndPort = siteName.split(":");
+            boolean isSSL = (site.getNodeName().startsWith("https"));
+            URIs.add(new ScanUri(site.getNodeName(), hostAndPort[0], hostAndPort[1], isSSL));
+        }
+
+        return URIs;
+    }
+
+    private String getScanReport() throws Exception {
+        ReportLastScan report = new ReportLastScan();
+        StringBuilder rpt = new StringBuilder();
+        report.generate(rpt, getModel());
+        return rpt.toString();
     }
 
     public void PostReport(String report, String target) throws IOException {
@@ -283,5 +363,35 @@ public class ExtensionAlertsExport extends ExtensionAdaptor
         } finally {
             client.close();
         }
+    }
+}
+
+class ScanUri {
+    private String name;
+    private String host;
+    private String port;
+    private Boolean isSSL;
+
+    public ScanUri(String name, String host, String port, Boolean isSSL) {
+        this.name = name;
+        this.host = host;
+        this.port = port;
+        this.isSSL = isSSL;
+    }
+
+    public String Name() {
+        return this.name;
+    }
+
+    public String Host() {
+        return this.host;
+    }
+
+    public String Port() {
+        return this.port;
+    }
+
+    public Boolean IsSSL() {
+        return this.isSSL;
     }
 }
