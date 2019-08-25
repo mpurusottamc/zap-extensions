@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 
+## [8] - 2019-08-23
+
+- Make fixes to the report generation process to handle encoding the same as other ZAP reports
 
 ## 7 - 2018-07-02
 
@@ -32,3 +35,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - First version
 
+[8]: https://github.com/zaproxy/zap-extensions/releases/codedx-v8
